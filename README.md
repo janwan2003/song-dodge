@@ -13,7 +13,7 @@ Cloudflare Pages (static `public/`, no build step) + Pages Functions (`functions
 Durable Object in the Worker `pb-song-dodge-db` (`worker/`, schema in `schema.sql`), because the account is at the
 free plan's 10 D1 databases. `lib/api.js` is D1-style code on a shim. `public/game.js` is the pure engine (dates,
 phases, state lines), shared by the Worker, the browser and the unit tests. Rate limits per hashed IP (create 20/h,
-join 60/h, writes 600/h, reads 3000/h). Games delete themselves 60 days after their last day. Undo within 15 minutes.
+join 60/h, writes 600/h, reads 20000/h (offices share one IP); the board polls every 60 s while visible). Games delete themselves 60 days after their last day. Undo within 15 minutes.
 
 ## Develop
 ```

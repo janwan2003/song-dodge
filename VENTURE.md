@@ -1,10 +1,10 @@
 ---
 slug: song-dodge
-stage: idea
+stage: launched
 priority: 4
-url:
-repo:
-updated: 2026-11-21
+url: https://pb-song-dodge.pages.dev
+repo: https://github.com/janwan2003/song-dodge
+updated: 2026-11-22
 ---
 
 # song-dodge
@@ -94,18 +94,64 @@ Searches run 2026-11-21. Sources are search-result summaries, not opened pages, 
 
 ## Status
 
-Idea only. Nothing built. Evidence above from web search on 2026-11-21.
+**Launched 2026-11-22** as **Dodgemas** at https://pb-song-dodge.pages.dev (product/support page
+https://janwan2003.github.io/song-dodge/, repo https://github.com/janwan2003/song-dodge). The name was checked by web
+search on 2026-11-22: no product called "Dodgemas" found. It contains no band name and no "…geddon" name. Storage is
+one SQLite Durable Object in Worker `pb-song-dodge-db`, because the account's 10 D1 databases are used up.
+
+What exists and works:
+- Create: the "1–24 December" preset (rolls to next year after 24 Dec), or custom dates (1–62 days, any "avoid it"
+  game); what to avoid; house rules (default: original recording only, covers don't count, sabotage allowed); creator's
+  time zone; no account.
+- Join from the link with a nickname (duplicates refused). Late joiners are welcome; the board shows "from day N".
+  Joining is refused after the end.
+- "I heard it… I'm out": quick place chips (Supermarket, Radio, At work, …) plus free text, optional "Who got you?"
+  (credits a saboteur). Not possible before the start or after the end. Undo within 15 minutes.
+- Board: a red hero card with "N of M still in · day X of Y" and a progress bar; the still-in chips; the fallen
+  timeline with day, place and saboteur, plus 4 emoji reactions; a saboteur table; after the end, "The survivors" and
+  "You survived".
+- Share cards, 1080x1350 PNG drawn in the browser: "I'M OUT" (day, place, who got you, survivors left), "STILL IN",
+  "I SURVIVED", "THE SURVIVORS". Each card ends in a "start a game for your group" line with the URL. Sharing uses the
+  share sheet with the file, and falls back to sharing the link plus save / press-and-hold.
+- Joiner→creator loop: "Start a game for another group" sits on the out box, the end state and the footer; home lists
+  "Your games".
+- Live link preview: "Avoid <title> · Dodgemas" + "Starts Tue 1 Dec · 4 players so far" / "Day 6 of 24 · 5 of 9 still
+  in. Last out: Sam (Supermarket)." / "Final · 3 of 9 survived".
+- Host: edit the title and rules, remove a player, delete the game. Players: a private link for another device, leave.
+- Rate limits per hashed IP: create 20/h, join 60/h, writes 600/h, reads 20000/h (high because whole offices share
+  one IP). The board polls every 60 s while visible. Games auto-delete 60 days after the last day. Privacy page, OG
+  image, icons, manifest. Search Console verified and sitemap submitted (`scripts/gsc.py`).
+
+Verified 2026-11-22 (how):
+- `node --test tests/unit/*.test.js`: 5/5 pass (time zones incl. Sydney/LA, DST midnight, season roll-over, phases,
+  state lines, saboteurs).
+- `tests/e2e/run.mjs` in real Chromium (playwright-core, 8 contexts: the host at 1280 px, players at 390 px).
+  **Passed locally** with time travel (x-now hook): before start → day 6 outs with saboteur → undo → reactions →
+  saboteur table → device link → kick → edit → 25 Dec survivors and cards → a stranger after the end → delete.
+  **Passed against production** with a custom game starting today, so the real out/undo/reaction path runs live. The
+  after-the-end steps are skipped there; curl confirmed that `x-now` is ignored in prod. Zero console errors in both runs.
+- curl: all public paths return 200; a WhatsApp user agent gets the live og:title/description; GitHub Pages returns 200.
+- Screenshots reviewed: home phone, board live phone/desktop, final desktop, out / survivor / survivors cards
+  (`shots/`, not committed). Fixed after review: background notes overlapped card text, the house rules field was cut
+  off, the OG headline collided with the board mock.
+- Not covered: real iOS Safari and the WhatsApp/iMessage in-app browsers, sharing the image file from those
+  in-app browsers, a real chat app fetching the preview, load beyond one Durable Object.
+
+## Metrics
+
+- 2026-11-22 (source: `GET https://pb-song-dodge.pages.dev/api/stats`, after the e2e runs deleted their own games):
+  0 games, 0 creators, 0 joiners. Search Console: site added today, no data yet.
 
 ## Next steps
 
-1. Operator call: build now for 2026-12-01, or park until November 2027. Recommendation: build only
-   if a worker can ship by 2026-12-03; it is a small app (one board, one tap, one card).
-2. Design the "I'm out" card, the survivors card and the live link preview first.
-3. Build on Cloudflare Pages + Functions + D1 (`pb-song-dodge`): game, members, eliminations
-   (day, place, saboteur), season dates; rate limit per IP; dynamic OG image.
-4. Playwright end-to-end test: create → 3 join → 2 knocked out → deadline → survivors card.
-5. After Christmas, test one other "avoid it" template (finale spoiler dodge) to see if the loop
-   survives off-season.
+1. **Get first groups before 1 December.** The season starts 2026-12-01 and day one is when people get knocked out
+   and share. Operator ask in the inbox: start one real game (office/family/friends) and check the preview on a phone.
+2. Next session (quality): run the e2e against prod on/after 1 Dec with the real December preset; check the live
+   preview line ("Day 1 of 24 · …") and the out card in a real chat.
+3. Consider a dynamic OG image (survivors count in the picture, not just the text). Rejected for now: the text
+   preview already carries the live state, and an image renderer on Workers adds weight and quota risk.
+4. A "group survivors card" at 24 Dec 23:59 for the host to post (the hall card exists; a reminder/nudge does not).
+5. After Christmas: try one off-season template (finale spoiler dodge) to see if the loop survives the season.
 
 ## Monetization plan
 
@@ -116,3 +162,4 @@ None now (rule 4). Seasonal product; at most a supporter tip later.
 - 2026-11-21 scout: created from scouting session; evidence from 4 web searches (search-result
   summaries, pages not opened). Not built.
 - 2026-11-21 review: raised p3→p4. The game runs 1-24 December, so it must ship in the next few days or wait a year.
+- 2026-11-22 builder: built and launched Dodgemas (Pages + Durable Object `pb-song-dodge-db`, GitHub repo + Pages, Search Console). Evidence re-checked (search for a tracker app: none found). Verified: unit 5/5, Playwright e2e passed locally (with time travel through the season) and against production (custom game starting today); curl of all paths and the live preview.

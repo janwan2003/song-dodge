@@ -244,7 +244,7 @@ async function shareCard(kind, justOut = false) {
   });
 }
 
-// Live updates: re-fetch every 25 s while the tab is visible (cheap; one small JSON).
-setInterval(() => { if (document.visibilityState === 'visible' && !sheetRoot.innerHTML) load(); }, 25000);
+// Live updates: re-fetch every 60 s while the tab is visible, and on returning to the tab (one small JSON).
+setInterval(() => { if (document.visibilityState === 'visible' && !sheetRoot.innerHTML) load(); }, 60000);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !sheetRoot.innerHTML) load(); });
 load();
