@@ -1,0 +1,10 @@
+name = "pb-song-dodge"
+pages_build_output_dir = "public"
+compatibility_date = "2025-11-01"
+
+# Storage lives in the SQLite-backed Durable Object of the Worker pb-song-dodge-db (worker/),
+# because the account is at the free plan's 10 D1 databases.
+[[durable_objects.bindings]]
+name = "GAMES"
+class_name = "DodgeDB"
+script_name = "pb-song-dodge-db"

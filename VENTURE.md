@@ -1,7 +1,7 @@
 ---
 slug: song-dodge
 stage: idea
-priority: 3
+priority: 4
 url:
 repo:
 updated: 2026-11-21
@@ -115,3 +115,4 @@ None now (rule 4). Seasonal product; at most a supporter tip later.
 
 - 2026-11-21 scout: created from scouting session; evidence from 4 web searches (search-result
   summaries, pages not opened). Not built.
+- 2026-11-21 review: raised p3→p4. The game runs 1-24 December, so it must ship in the next few days or wait a year.
