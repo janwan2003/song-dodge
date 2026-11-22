@@ -111,7 +111,7 @@ function render() {
   if (me) {
     h += `<section class="card"><h3>Your game</h3><div class="tools">
       <button id="devLink">Open on another device</button>
-      ${me.host ? '<button id="edit">Edit name and rules</button><button id="kick">Remove a player</button><button id="del">Delete game</button>' : '<button id="leave">Leave this game</button>'}
+      ${me.host ? '<button id="edit">Edit name and rules</button><button id="kick">Players and personal links</button><button id="del">Delete game</button>' : '<button id="leave">Leave this game</button>'}
       </div></section>`;
   }
   view.innerHTML = h;
@@ -174,24 +174,56 @@ function bind() {
       try { S = await api(`games/${id}/edit`, { method: 'POST', id, body: { title: $('#eTitle').value, rules: $('#eRules').value } }); closeSheet(); render(); toast('Saved'); } catch (err) { $('#eErr').textContent = err.message; }
     });
   }));
-  on('#kick', () => {
-    const others = S.members.filter((m) => m.id !== S.me.id);
-    openSheet(`<h2>Remove a player</h2>${others.length ? `<p class="mute">For duplicates or people who joined by mistake.</p><div class="choice">${others.map((m) => `<button class="btn ghost" data-kick="${m.id}">${esc(m.name)}</button>`).join('')}</div>` : '<p class="mute">Nobody else has joined yet.</p>'}<button class="btn ghost block" data-close style="margin-top:12px">Close</button>`, () => {
-      document.querySelectorAll('[data-kick]').forEach((b) => b.addEventListener('click', async () => {
-        if (!confirm(`Remove ${b.textContent}?`)) return;
-        try { S = await api(`games/${id}/kick`, { method: 'POST', id, body: { member: b.dataset.kick } }); closeSheet(); render(); } catch (e) { toast(e.message); }
-      }));
-    });
+  on('#kick', playersSheet);
+}
+
+// Host tools per player: a fresh personal link (for someone who lost access, e.g. joined inside a chat app's browser
+// and later opened the link elsewhere) and remove (duplicates, people who joined by mistake).
+function playersSheet() {
+  const others = S.members.filter((m) => m.id !== S.me.id);
+  openSheet(`<h2>Players</h2>${others.length ? `<p class="mute">Someone lost their place (new phone, or they joined inside a chat app)? Send them a new personal link. Remove is for duplicates and mistakes.</p>
+    <ul class="plist">${others.map((m) => `<li><span class="pname">${esc(m.name)}${m.out ? ' <span class="small mute">· out</span>' : ''}</span><button class="btn ghost sm" data-relink="${esc(m.id)}">Personal link</button><button class="btn ghost sm danger" data-kick="${esc(m.id)}" aria-label="Remove ${esc(m.name)}">Remove</button></li>`).join('')}</ul>
+    <div id="relinkOut"></div>` : '<p class="mute">Nobody else has joined yet.</p>'}<button class="btn ghost block" data-close style="margin-top:12px">Close</button>`, () => {
+    document.querySelectorAll('[data-kick]').forEach((b) => b.addEventListener('click', async () => {
+      if (!confirm(`Remove ${nameOf(b.dataset.kick)} from the game?`)) return;
+      try { S = await api(`games/${id}/kick`, { method: 'POST', id, body: { member: b.dataset.kick } }); closeSheet(); render(); toast('Removed'); } catch (e) { toast(e.message); }
+    }));
+    document.querySelectorAll('[data-relink]').forEach((b) => b.addEventListener('click', async () => {
+      const who = nameOf(b.dataset.relink);
+      if (!confirm(`Make a new personal link for ${who}? It signs them in as ${who}; their old link stops working.`)) return;
+      try {
+        const r = await api(`games/${id}/relink`, { method: 'POST', id, body: { member: b.dataset.relink } });
+        const url = `${link()}#k=${encodeURIComponent(r.token)}`;
+        $('#relinkOut').innerHTML = `<div class="relink"><p><b>Send this to ${esc(who)} only.</b> It signs them in as ${esc(who)}.</p><div class="linkbox"><input type="text" readonly value="${esc(url)}" id="relinkIn" aria-label="Personal link for ${esc(who)}"><button class="btn red sm" id="relinkSend">${navigator.share ? 'Send' : 'Copy'}</button></div></div>`;
+        $('#relinkSend').addEventListener('click', () => shareLink(url, `${who}, this is your personal Dodgemas link. Don’t share it:`));
+        $('#relinkIn').scrollIntoView({ block: 'nearest' });
+      } catch (e) { toast(e.message); }
+    }));
   });
 }
 
+let sheetUrl = null; // object URL of the card shown in the sheet, released on close
+let sheetOpener = null;
 function openSheet(html, after) {
-  sheetRoot.innerHTML = `<div class="sheet-bg" id="sheetBg"><div class="sheet" role="dialog" aria-modal="true" id="sheet">${html}</div></div>`;
+  if (!sheetRoot.innerHTML) sheetOpener = document.activeElement;
+  releaseCard();
+  sheetRoot.innerHTML = `<div class="sheet-bg" id="sheetBg"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" id="sheet" tabindex="-1">${html}</div></div>`;
+  $('#sheet h2')?.setAttribute('id', 'sheetTitle');
+  document.body.classList.add('locked');
+  $('#sheet').focus({ preventScroll: true });
   $('#sheetBg').addEventListener('click', (e) => { if (e.target.id === 'sheetBg' || e.target.closest('[data-close]')) closeSheet(); });
   sheetRoot.querySelectorAll('[data-invite]').forEach((b) => b.addEventListener('click', () => shareLink(link(), inviteText())));
   after?.();
 }
-function closeSheet() { sheetRoot.innerHTML = ''; }
+function releaseCard() { if (sheetUrl) { URL.revokeObjectURL(sheetUrl); sheetUrl = null; } }
+function closeSheet() {
+  releaseCard();
+  sheetRoot.innerHTML = '';
+  document.body.classList.remove('locked');
+  if (sheetOpener && document.contains(sheetOpener)) sheetOpener.focus({ preventScroll: true });
+  sheetOpener = null;
+}
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && sheetRoot.innerHTML) closeSheet(); });
 
 function outSheet() {
   const others = S.members.filter((m) => m.id !== S.me.id);
@@ -233,6 +265,7 @@ async function shareCard(kind, justOut = false) {
   openSheet(`<h2>${justOut ? 'Out. Tell everyone.' : 'Your card'}</h2><img class="preview-img" src="${url}" alt="Share card" id="cardImg">
     <div class="row"><button class="btn red" id="shareImg">Share image</button><a class="btn ghost" href="${url}" download="${file.name}">Save</a></div>
     <p class="hint">On a phone, you can also press and hold the image to save it.</p><button class="btn ghost block" data-close style="margin-top:8px">Close</button>`, () => {
+    sheetUrl = url;
     $('#shareImg').addEventListener('click', async () => {
       const data = { files: [file], text: `${text} ${link()}` };
       if (navigator.canShare?.(data)) {
@@ -245,6 +278,14 @@ async function shareCard(kind, justOut = false) {
 }
 
 // Live updates: re-fetch every 60 s while the tab is visible, and on returning to the tab (one small JSON).
-setInterval(() => { if (document.visibilityState === 'visible' && !sheetRoot.innerHTML) load(); }, 60000);
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !sheetRoot.innerHTML) load(); });
+// Skipped while a sheet is open or the person is typing, so a refresh never wipes a half-typed nickname.
+function busy() {
+  if (sheetRoot.innerHTML) return true;
+  const a = document.activeElement;
+  if (a && view.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && !a.readOnly) return true;
+  return !!$('#jname')?.value.trim();
+}
+const refresh = () => { if (document.visibilityState === 'visible' && !busy()) load(); };
+setInterval(refresh, 60000);
+document.addEventListener('visibilitychange', refresh);
 load();

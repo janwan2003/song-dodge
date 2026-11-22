@@ -7,8 +7,18 @@ const THEMES = {
   won: ['#2A2116', '#120D07', '#FFF3D6', '#F2C14E'],
 };
 
+// Splits a word wider than maxW into pieces that fit (a 24-letter nickname or a URL-like title).
+function hardBreak(ctx, w, maxW) {
+  const out = [];
+  let cur = '';
+  for (const ch of w) {
+    if (ctx.measureText(cur + ch).width > maxW && cur) { out.push(cur); cur = ch; } else cur += ch;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
 function wrap(ctx, text, maxW) {
-  const words = String(text).split(/\s+/);
+  const words = String(text).split(/\s+/).flatMap((w) => (ctx.measureText(w).width > maxW ? hardBreak(ctx, w, maxW) : [w]));
   const lines = [];
   let cur = '';
   for (const w of words) {
@@ -26,9 +36,24 @@ function para(ctx, text, y, size, weight, color, maxLines = 3, lh = 1.22) {
   ctx.font = `${weight} ${size}px ${FONT}`;
   ctx.fillStyle = color;
   let lines = wrap(ctx, text, W - 160);
-  if (lines.length > maxLines) { lines = lines.slice(0, maxLines); lines[maxLines - 1] = lines[maxLines - 1].replace(/\s*\S*$/, '') + '…'; }
+  if (lines.length > maxLines) {
+    lines = lines.slice(0, maxLines);
+    let t = lines[maxLines - 1] + '…';
+    while (ctx.measureText(t).width > W - 160 && t.length > 2) t = t.slice(0, -2).trimEnd() + '…';
+    lines[maxLines - 1] = t;
+  }
   for (const l of lines) { ctx.fillText(l, W / 2, y); y += size * lh; }
   return y;
+}
+// One line at `size`, shrunk until it fits `maxW` (min 28 px), then truncated with an ellipsis if still too wide.
+function line(ctx, text, y, size, weight, color, maxW = W - 160) {
+  let s = size;
+  ctx.font = `${weight} ${s}px ${FONT}`;
+  while (ctx.measureText(text).width > maxW && s > 28) { s -= 2; ctx.font = `${weight} ${s}px ${FONT}`; }
+  let t = String(text);
+  while (ctx.measureText(t).width > maxW && t.length > 1) t = t.slice(0, -2) + '…';
+  ctx.fillStyle = color;
+  ctx.fillText(t, W / 2, y);
 }
 function pill(ctx, text, y, bg, fg) {
   ctx.font = `750 40px ${FONT}`;
@@ -69,7 +94,7 @@ export function drawCard(kind, d) {
     ctx.font = `800 64px ${FONT}`; ctx.fillStyle = accent; ctx.fillText(`Day ${d.day} of ${d.days}`, W / 2, 630);
     y = 740;
     if (d.where) y = para(ctx, `“${d.where}”`, y, 52, 650, fg, 3) + 10;
-    if (d.by) y = para(ctx, `Got by ${d.by}`, y, 46, 750, accent, 1) + 10;
+    if (d.by) { line(ctx, `Got by ${d.by}`, y, 46, 750, accent); y += 66; }
     pill(ctx, `${d.alive} of ${d.total} still in`, Math.max(y + 60, 1040), 'rgba(255,255,255,.16)', fg);
   } else if (kind === 'in') {
     ctx.fillStyle = fg; fit(ctx, 'STILL IN', 900, 210, W - 120); ctx.fillText('STILL IN', W / 2, 520);
@@ -84,13 +109,25 @@ export function drawCard(kind, d) {
   } else {
     ctx.fillStyle = accent; ctx.font = `400 120px ${FONT}`; ctx.fillText('👑', W / 2, 380);
     ctx.fillStyle = fg; fit(ctx, 'THE SURVIVORS', 900, 120, W - 120); ctx.fillText('THE SURVIVORS', W / 2, 520);
+    // Names flow as centred lines ("Sam · Ana · Cat"), at most 5 lines, then "+ N more". Bounded so the pill and the
+    // footer never collide, whatever the count or length of the names.
     const names = d.names.length ? d.names : ['Nobody made it'];
-    const shown = names.slice(0, 8);
-    const size = shown.length > 5 ? 52 : 64;
-    y = 630;
-    ctx.font = `750 ${size}px ${FONT}`; ctx.fillStyle = fg;
-    for (const n of shown) { ctx.fillText(n, W / 2, y); y += size * 1.25; }
-    if (names.length > shown.length) { ctx.font = `600 44px ${FONT}`; ctx.fillText(`+ ${names.length - shown.length} more`, W / 2, y); y += 60; }
+    const size = names.length <= 3 ? 64 : 54;
+    ctx.font = `750 ${size}px ${FONT}`;
+    const maxW = W - 160, sep = '  ·  ', lines = [];
+    let cur = [];
+    for (const n of names) {
+      if (cur.length && (names.length <= 3 || ctx.measureText([...cur, n].join(sep)).width > maxW)) {
+        lines.push(cur); cur = [];
+        if (lines.length === 5) break;
+      }
+      cur.push(n);
+    }
+    if (cur.length && lines.length < 5) lines.push(cur);
+    const rest = names.length - lines.flat().length;
+    y = 640;
+    for (const l of lines) { line(ctx, l.join(sep), y, size, 750, fg, maxW); y += size * 1.3; }
+    if (rest > 0) { ctx.font = `600 44px ${FONT}`; ctx.fillStyle = fg; ctx.fillText(`+ ${rest} more`, W / 2, y); y += 60; }
     pill(ctx, `${d.alive} of ${d.total} made it through ${d.days} days`, Math.max(y + 50, 1090), 'rgba(242,193,78,.2)', accent);
   }
   ctx.font = `600 32px ${FONT}`; ctx.fillStyle = fg; ctx.globalAlpha = 0.8;

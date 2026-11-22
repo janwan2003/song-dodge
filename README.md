@@ -3,7 +3,8 @@
 Free at **https://pb-song-dodge.pages.dev** · product/support page: https://janwan2003.github.io/song-dodge/
 
 One person starts a game (the 1–24 December season, or custom dates for any "avoid it" game) and shares the link.
-Friends join with a nickname. When the song gets someone, they tap **I'm out**, say where, and optionally who
+Friends join with a nickname (someone who lost their place, e.g. joined inside a chat app's browser, gets a new
+personal link from the host). When the song gets someone, they tap **I'm out**, say where, and optionally who
 sabotaged them. The board shows who is still in, the fallen timeline with reactions, a saboteur table, and after the
 last day the survivors. Share cards (1080x1350 PNG, drawn in the browser): "I'm out", "Still in", "I survived",
 "The survivors". No accounts, no app, no ads.

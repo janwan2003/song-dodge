@@ -117,12 +117,29 @@ What exists and works:
   "Your games".
 - Live link preview: "Avoid <title> · Dodgemas" + "Starts Tue 1 Dec · 4 players so far" / "Day 6 of 24 · 5 of 9 still
   in. Last out: Sam (Supermarket)." / "Final · 3 of 9 survived".
-- Host: edit the title and rules, remove a player, delete the game. Players: a private link for another device, leave.
+- Host: edit the title and rules, delete the game, and a "Players and personal links" sheet: remove a player, or issue a
+  fresh personal link for a player who lost access (typically joined inside WhatsApp/Instagram's in-app browser and
+  later opened the link in their normal browser; the old token stops working). A duplicate-name join now says "Is that
+  you on another phone or app? Ask <host> for your personal link". Players: a private link for another device, leave.
+- Home: a season badge ("The season starts in N days, on 1 December" / "Day N of 24 · it's not too late"), an FAQ entry
+  for "it asks for my name again". Unknown paths return a real 404 page (they returned the home page with 200 before).
+- The board's 60 s refresh skips while someone is typing (it used to wipe a half-typed nickname on returning to the
+  tab). Sheets close on Escape, take focus, lock page scroll, and free the card image on close.
 - Rate limits per hashed IP: create 20/h, join 60/h, writes 600/h, reads 20000/h (high because whole offices share
   one IP). The board polls every 60 s while visible. Games auto-delete 60 days after the last day. Privacy page, OG
   image, icons, manifest. Search Console verified and sitemap submitted (`scripts/gsc.py`).
 
-Verified 2026-11-22 (how):
+Verified 2026-11-22, quality session (how):
+- e2e now also covers: the duplicate-name hint naming the host; a tab-switch refresh keeping a half-typed nickname;
+  Escape closing a sheet; share cards drawn with 14 survivors, a 24-letter nickname, a 60-letter one-word title and an
+  over-long place (screenshot `shots/card-stress-phone.png`: all text inside the card, nothing overlapping); the host
+  issuing Cat a new personal link, Cat signed in on a fresh browser and the old browser signed out.
+  **PASS locally (time travel) and PASS against production** (Worker version 04ccfd9a, Pages deploy d816f06e), zero
+  console errors. Unit 5/5. curl: `/`, `/privacy`, `/g/<id>` 200; `/does-not-exist` 404.
+- Screenshots reviewed: home phone/desktop (season badge, 3-line rules box, compact steps on phone), board live
+  phone, final desktop, players sheet desktop, stress cards.
+
+Verified earlier on 2026-11-22 (launch session):
 - `node --test tests/unit/*.test.js`: 5/5 pass (time zones incl. Sydney/LA, DST midnight, season roll-over, phases,
   state lines, saboteurs).
 - `tests/e2e/run.mjs` in real Chromium (playwright-core, 8 contexts: the host at 1280 px, players at 390 px).
@@ -141,17 +158,20 @@ Verified 2026-11-22 (how):
 
 - 2026-11-22 (source: `GET https://pb-song-dodge.pages.dev/api/stats`, after the e2e runs deleted their own games):
   0 games, 0 creators, 0 joiners. Search Console: site added today, no data yet.
+- 2026-11-22 later (same source, after the quality session's prod e2e deleted its game): 0 games, 0 creators, 0 joiners.
 
 ## Next steps
 
 1. **Get first groups before 1 December.** The season starts 2026-12-01 and day one is when people get knocked out
    and share. Operator ask in the inbox: start one real game (office/family/friends) and check the preview on a phone.
 2. Next session (quality): run the e2e against prod on/after 1 Dec with the real December preset; check the live
-   preview line ("Day 1 of 24 · …") and the out card in a real chat.
-3. Consider a dynamic OG image (survivors count in the picture, not just the text). Rejected for now: the text
+   preview line ("Day 1 of 24 · …") and the out card in a real chat. Read `/api/stats` and record real games.
+3. If real games appear: check whether anyone needed the host's personal link (no counter exists; ask in the inbox
+   rather than adding tracking).
+4. Consider a dynamic OG image (survivors count in the picture, not just the text). Rejected for now: the text
    preview already carries the live state, and an image renderer on Workers adds weight and quota risk.
-4. A "group survivors card" at 24 Dec 23:59 for the host to post (the hall card exists; a reminder/nudge does not).
-5. After Christmas: try one off-season template (finale spoiler dodge) to see if the loop survives the season.
+5. A "group survivors card" at 24 Dec 23:59 for the host to post (the hall card exists; a reminder/nudge does not).
+6. After Christmas: try one off-season template (finale spoiler dodge) to see if the loop survives the season.
 
 ## Monetization plan
 
@@ -163,3 +183,5 @@ None now (rule 4). Seasonal product; at most a supporter tip later.
   summaries, pages not opened). Not built.
 - 2026-11-21 review: raised p3→p4. The game runs 1-24 December, so it must ship in the next few days or wait a year.
 - 2026-11-22 builder: built and launched Dodgemas (Pages + Durable Object `pb-song-dodge-db`, GitHub repo + Pages, Search Console). Evidence re-checked (search for a tracker app: none found). Verified: unit 5/5, Playwright e2e passed locally (with time travel through the season) and against production (custom game starting today); curl of all paths and the live preview.
+- 2026-11-22 review: kept p4. URL 200, 0 console errors (headless Chromium, 390 px, 2026-11-22 ~03:40 UTC); Search Console 0 impressions 11-01→11-22; `/api/stats` 0 games. Under 21 days live, so no traction verdict. Groups must form before 1 Dec.
+- 2026-11-22 builder (quality): fixed lost-access dead end (host issues a new personal link; duplicate-name message points to it), refresh wiping a half-typed nickname, survivors/out cards overflowing with long or many names, soft-404 on unknown paths; added season badge, Escape/focus/scroll-lock on sheets, compact steps and 3-line rules box on phone, FAQ + support-page help. Verified: unit 5/5; e2e PASS local (time travel) and PASS on production (Worker 04ccfd9a, Pages d816f06e), 0 console errors; curl 200/404 as expected; screenshots reviewed.

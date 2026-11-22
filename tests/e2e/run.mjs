@@ -90,6 +90,13 @@ try {
   await dup.page.fill('#jname', 'ana');
   await dup.page.click('#jgo');
   await dup.page.locator('#jerr').getByText('already playing').waitFor();
+  await dup.page.locator('#jerr').getByText('Ask Sam for your personal link').waitFor();
+  step('a refresh (tab switch) never wipes a half-typed nickname');
+  await dup.page.fill('#jname', 'Half-typed');
+  await dup.page.locator('#jname').blur();
+  await dup.page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await dup.page.waitForTimeout(400);
+  assert.equal(await dup.page.inputValue('#jname'), 'Half-typed');
   if (LOCAL) await shot(players.Ana.page, 'board-before-phone.png');
 
   step('link preview text');
@@ -150,11 +157,26 @@ try {
   await sam.page.locator('#fallen li').nth(1).waitFor();
   await shot(sam.page, 'board-live-desktop.png');
 
-  step('still-in card');
+  step('still-in card; Escape closes the sheet');
   await ana.click('#brag');
   await ana.locator('#cardImg').waitFor();
   await shot(ana, 'card-still-in-phone.png', false);
-  await closeSheet(ana);
+  await ana.keyboard.press('Escape');
+  assert.equal(await ana.locator('#sheet').count(), 0, 'Escape closes the sheet');
+
+  step('share cards stay inside their layout with long and many names');
+  const stress = await ana.evaluate(async () => {
+    const { drawCard } = await import('/card.js');
+    const names = ['Wolfgang-Amadeus Ritter', 'Ana', 'Benedikt', 'Cat', 'Siobhán', 'Priya', 'Tomasz', 'Aoife', 'Lars', 'Mia', 'Jonas', 'Ellie', 'Oluwaseun', 'Zoë'];
+    const hall = drawCard('hall', { title: 'That one Christmas song with the sleigh bells and the whistle', day: 24, days: 24, alive: names.length, total: 20, names });
+    const out = drawCard('out', { title: 'Supercalifragilisticexpialidocious-the-very-long-song-title', day: 12, days: 24, where: 'Tesco self-checkout at 8:15 am, then again in the car park, then a third time at the bus stop on the way home', by: 'WWWWWWWWWWWWWWWWWWWWWWWW', alive: 3, total: 9, names: [] });
+    document.body.innerHTML = `<div style="display:flex;gap:6px;background:#333"><img src="${hall.toDataURL()}" style="width:50%"><img src="${out.toDataURL()}" style="width:50%"></div>`;
+    return [hall.width, out.width];
+  });
+  assert.deepEqual(stress, [1080, 1080]);
+  await shot(ana, 'card-stress-phone.png', false);
+  await ana.reload();
+  await ana.locator('.hero').waitFor();
 
   step('personal link moves Ana to a new device');
   await ana.click('#devLink');
@@ -165,9 +187,22 @@ try {
   await ana2.page.locator('.card h2', { hasText: ', Ana' }).waitFor();
   assert.ok(!ana2.page.url().includes('#k='), 'token removed from the address bar');
 
+  step('host makes a new personal link for Cat (lost access); it signs Cat in on a new browser, the old one is signed out');
+  await sam.page.click('#kick');
+  await sam.page.locator('.plist li', { hasText: 'Cat' }).locator('[data-relink]').click();
+  const relink = await sam.page.inputValue('#relinkIn');
+  assert.match(relink, /#k=/);
+  await shot(sam.page, 'players-sheet-desktop.png', false);
+  await closeSheet(sam.page);
+  const cat2 = await person('Cat2', PHONE);
+  await cat2.page.goto(relink);
+  await cat2.page.locator('.card h2', { hasText: ', Cat' }).waitFor();
+  await cat.reload();
+  await cat.locator('#joinBox').waitFor();
+
   step('host removes Dan; host edits the rules');
   await sam.page.click('#kick');
-  await sam.page.locator('[data-kick]', { hasText: 'Dan' }).click();
+  await sam.page.locator('.plist li', { hasText: 'Dan' }).locator('[data-kick]').click();
   await sam.page.waitForFunction(() => document.querySelectorAll('#fallen li').length === 1);
   await sam.page.click('#edit');
   await sam.page.fill('#eRules', 'Original only. Sabotage encouraged.');

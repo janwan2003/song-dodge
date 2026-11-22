@@ -92,3 +92,23 @@ footer.foot a{color:var(--mute)}
 .mygames a:first-of-type{border-top:0}
 .hidden{display:none!important}
 .center{text-align:center}
+body.locked{overflow:hidden}
+.sheet:focus{outline:none}
+.plist{list-style:none;margin:0 0 4px;padding:0}
+.plist li{display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
+.plist li:first-child{border-top:0}
+.plist .pname{flex:1;min-width:0;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plist .btn{flex:0 0 auto}
+.btn.ghost.danger{color:var(--red2)}
+.relink{margin-top:12px;padding:14px;border-radius:14px;background:#FFF7F6;border:1.5px dashed var(--red)}
+.relink p{font-size:14.5px}
+.season{display:inline-flex;align-items:center;gap:8px;margin:14px 0 0;padding:6px 12px 6px 10px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:14px;font-weight:650;color:var(--red2);box-shadow:var(--shadow)}
+.season i{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 0 3px rgba(200,30,51,.18)}
+.season.hidden{display:none}
+@media (max-width:560px){
+  .steps{gap:8px}
+  .step{display:grid;grid-template-columns:auto 1fr;column-gap:12px;align-items:start;padding:12px 14px}
+  .step .n{grid-row:span 2;margin:2px 0 0}
+  .step h3{margin:0 0 2px}
+  .step p{margin:0}
+}
